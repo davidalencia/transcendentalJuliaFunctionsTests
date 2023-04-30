@@ -119,14 +119,14 @@ ulp_error_double(float y, float x)
   // printf("\n");
 
   e = mpfr_get_exp(zz);
-  mpfr_sub(zz, zz, yy, MPFR_RNDA);
-  mpfr_abs(zz, zz, MPFR_RNDN);
+  mpfr_sub(zz, zz, yy, MPFR_RNDA); // zz = zz - yy
+  mpfr_abs(zz, zz, MPFR_RNDN);     // zz = abs(zz)
   /* we should add 2^(e - prec - 1) to |zz| */
-  mpfr_set_ui_2exp(yy, 1, e - prec - 1, MPFR_RNDN);
-  mpfr_add(zz, zz, yy, MPFR_RNDA);
+  mpfr_set_ui_2exp(yy, 1, e - prec - 1, MPFR_RNDN); // yy = 1*2^(e-prec-1), RoundNearest
+  mpfr_add(zz, zz, yy, MPFR_RNDA);                  // zz = zz + yy, Round away from zero.
   /* divide by ulp(y) */
   e = (e - 24 < -149) ? -149 : e - 24;
-  mpfr_mul_2si(zz, zz, -e, MPFR_RNDN);
+  mpfr_mul_2si(zz, zz, -e, MPFR_RNDN); // zz = zz*2^(-e*2)
   err = mpfr_get_d(zz, MPFR_RNDA);
   mpfr_set_emin(emin);
   mpfr_set_emax(emax);
