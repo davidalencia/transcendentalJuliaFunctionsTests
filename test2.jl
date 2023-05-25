@@ -29,23 +29,11 @@ const c_fun = @cfunction(getfield(Main, Symbol(FN)), Cdouble, (Cdouble,))
 
 function check(x::UInt32, fn::String)::Float64
     return ccall(
-        (:check, "check.so"),
+        (:check, "check2.so"),
         Cdouble,
         (Cuint, Ptr{Cdouble},),
         x, c_fun
     )
-end
-
-function getMaxError(fn)
-    errmax::Float64 = 0
-    err::Float64 = 0
-    @showprogress for i in 0:(2_139_095_040-1)
-        err = check(convert(UInt32, i), fn)
-        if (err > errmax)
-            errmax = err
-        end
-    end
-    return errmax
 end
 
 function saveInBucket(err::Float64)
@@ -92,7 +80,8 @@ function saveerrors(fun; domain=(x) -> true)
     println(buckets)
 end
 
-saveerrors(
-    FN,
-    domain=fndomain
-)
+# saveerrors(
+#     FN,
+#     domain=fndomain
+# )
+check(convert(UInt32, 5000000), FN) # FN=csc

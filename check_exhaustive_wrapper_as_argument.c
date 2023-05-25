@@ -74,12 +74,11 @@ int mpfr_sincos2(mpfr_t y, mpfr_t x, mpfr_rnd_t r)
 #define TOSTRING(x) STRINGIFY(x)
 #define NAME TOSTRING(FOO)
 
+const float Inf = 1.0 / 0.0; // positive infinte
 int rnd1[] = {FE_TONEAREST, FE_TOWARDZERO, FE_UPWARD, FE_DOWNWARD};
 mpfr_rnd_t rnd2[] = {MPFR_RNDN, MPFR_RNDZ, MPFR_RNDU, MPFR_RNDD};
 
 mpfr_rnd_t rnd = MPFR_RNDN; /* default is to nearest */
-
-int verbose = 0;
 
 /* tgamma in C corresponds to mpfr_gamma */
 int mpfr_tgamma(mpfr_t y, mpfr_t x, mpfr_rnd_t r)
@@ -114,19 +113,46 @@ ulp_error_double(float y, float x)
   ret = mpfr_set_flt(zz, x, MPFR_RNDN);
   assert(ret == 0);
   MPFR_FOO(zz, zz, MPFR_RNDN);
-  // printf("x:%f, y:", x);
-  // printMPFR(yy);
+
+  // printf("y is inf: %d, zz is inf: %d, z is inf: %d\n", isinf(y), mpfr_inf_p(yy), mpfr_inf_p(zz));
+  // printf("x:%f, ", x);
+  // mpfr_printf("y: %.100Rf", yy);
+  // printf(", z: ");
+  // mpfr_printf("%.100Rf", zz);
   // printf("\n");
+  // printf("\n");
+
+  if (mpfr_cmp(yy, zz) == 0)
+  {
+    mpfr_clear(yy);
+    mpfr_clear(zz);
+    return (long)0;
+  }
 
   e = mpfr_get_exp(zz);
   mpfr_sub(zz, zz, yy, MPFR_RNDA); // zz = zz - yy
   mpfr_abs(zz, zz, MPFR_RNDN);     // zz = abs(zz)
+
+  // printf("yy exp: %ld", e);
+
+  // printf("e: %ld", e);
+  // mpfr_printf(", prec %Pu\n", prec);
+  // printf("resta   ld: %ld\n", e - prec - 1);
+  // mpfr_printf("resta mpfr: %Pu\n", e - prec - 1);
+
   /* we should add 2^(e - prec - 1) to |zz| */
+  // if (mpfr_cmp(zz, (double)0.0) != 0)
+  // {
   mpfr_set_ui_2exp(yy, 1, e - prec - 1, MPFR_RNDN); // yy = 1*2^(e-prec-1), RoundNearest
   mpfr_add(zz, zz, yy, MPFR_RNDA);                  // zz = zz + yy, Round away from zero.
+  // }
+
+  // printf("yy:");
+  // mpfr_printf("%.128Rf", yy);
+  // printf("\n");
   /* divide by ulp(y) */
-  e = (e - 24 < -149) ? -149 : e - 24;
-  mpfr_mul_2si(zz, zz, -e, MPFR_RNDN); // zz = zz*2^(-e*2)
+  e = (e - 24 < -149) ? -149 : e - 24; // creo que es max(e, e_min)-p+1 para e en los float32
+  mpfr_mul_2si(zz, zz, -e, MPFR_RNDN); // zz = zz*2^(-e) , creo que esta usando la definición de Goldberg
   err = mpfr_get_d(zz, MPFR_RNDA);
   mpfr_set_emin(emin);
   mpfr_set_emax(emax);
@@ -162,6 +188,36 @@ asuint(float x)
   return u.n;
 }
 
+double distance2inf32(float x)
+{
+  mpfr_t zz;
+  mpfr_init2(zz, 22); // 22 = precision of normal float32
+
+  int ret = mpfr_set_flt(zz, x, MPFR_RNDN);
+  assert(ret == 0);
+  mpfr_printf("x: %.50Rf\n", zz);
+
+  MPFR_FOO(zz, zz, MPFR_RNDN); // mpfr trig function
+  ret = mpfr_inf_p(zz);        // Return non-zero if op is an infinity
+  double steps = 0;
+  if (mpfr_sgn(zz)) // Return a positive value if op > 0, zero if op = 0, and a negative
+    while (ret == 0)
+    {
+      mpfr_nextabove(zz);
+      ret = mpfr_inf_p(zz);
+      steps++;
+    }
+  else
+    while (ret == 0)
+    {
+      mpfr_nextbelow(zz);
+      ret = mpfr_inf_p(zz);
+      steps++;
+    }
+  printf("steps= %f\n", steps);
+  return (double)steps;
+}
+
 double check(unsigned int n, double (*WRAPPER)(const double))
 {
   mpfr_set_emin(-148);
@@ -175,8 +231,9 @@ double check(unsigned int n, double (*WRAPPER)(const double))
 
   fesetround(rnd1[rnd]);
   y = WRAPPER(x);
-  // z = cr_foo(x);
 
-  double err_double = ulp_error_double(y, x);
-  return err_double;
+  if (isinf(y))
+    return (double)distance2inf32(x);
+
+  return ulp_error_double(y, x);
 }
