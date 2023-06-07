@@ -72,16 +72,12 @@ ulp_error_double(double y, double x)
     e = mpfr_get_exp(zz);
     mpfr_sub(zz, zz, yy, MPFR_RNDA); // zz = zz - yy
     mpfr_abs(zz, zz, MPFR_RNDN);     // zz = abs(zz)
-    // mpfr_printf("dif = %.80Rf \n ", zz);
 
     // /* we should add 2^(e - prec - 1) to |zz| */
-    // printf("e: %ld\n", e);
     int eint = (int)e;
-    // printf("e: %d\n", eint);
 
     mpfr_set_ui_2exp(yy, 1, e - prec - 1, MPFR_RNDN); // yy = 1*2^(e-prec-1), RoundNearest
     mpfr_add(zz, zz, yy, MPFR_RNDA);                  // zz = zz + yy, Round away from zero.
-    // mpfr_printf("dif2 = %.80Rf \n ", zz);
 
     // /* divide by ulp(y) */
     // e_min = -1022 (f32 -126), p=52 (f32 p=24),          tabla 3.13 HFPA
@@ -90,7 +86,6 @@ ulp_error_double(double y, double x)
     eint = (eint - 52 < -1073) ? -1073 : eint - 52;
 
     mpfr_mul_2si(zz, zz, -eint, MPFR_RNDN); // zz = zz*2^(-e), esta usando la definición de Ulp de Goldberg
-    // mpfr_printf("divided by ulps = %.80Rf \n ", zz);
 
     err = mpfr_get_d(zz, MPFR_RNDA);
     mpfr_set_emin(emin);

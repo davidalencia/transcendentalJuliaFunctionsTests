@@ -25,13 +25,14 @@ function montecarlo(r::UnitRange{UInt}, poolsize::Int)
     # for i in 
     max = (-1, -1, 0.0)
     Random.seed!(187372311)
-    for i in 1:poolsize
+
+    @showprogress for i in 1:poolsize
         x = rand(r)
         err = check(x)
         num = reinterpret(Float64, x)
         # println("$(num) : $(err)")
         if(err>max[3])
-            max=(i, num, err)
+            max=(x, num, err)
             println(max)
         end
     end
@@ -39,6 +40,6 @@ function montecarlo(r::UnitRange{UInt}, poolsize::Int)
     # println(reinterpret(Float64, rand(r, 100)))
 end
 
-montecarlo(positiverange, 100_000_000) 
+montecarlo(positiverange, 100_000_000_000) 
 # 0x0-0x7ff0000000000000, 0x7ff0000000000001-0x7fffffffffffffff, 0x8000000000000000-0xfff0000000000000, 0xfff0000000000001-0xffffffffffffffff
 # +0     +Inf                   NaN            NaN                     -0                   -Inf            NaN                     NaN
