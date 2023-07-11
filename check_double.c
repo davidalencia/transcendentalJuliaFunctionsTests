@@ -39,7 +39,7 @@ ulp_error_double(double y, double x)
 {
     mpfr_t yy, zz;
     mpfr_prec_t prec = 160;
-    int ret;
+    int ret, sign;
     mpfr_exp_t e;
     double err;
     mpfr_exp_t emin = mpfr_get_emin();
@@ -71,7 +71,8 @@ ulp_error_double(double y, double x)
 
     e = mpfr_get_exp(zz);
     mpfr_sub(zz, zz, yy, MPFR_RNDA); // zz = zz - yy
-    mpfr_abs(zz, zz, MPFR_RNDN);     // zz = abs(zz)
+    sign = mpfr_sgn(zz);
+    mpfr_abs(zz, zz, MPFR_RNDN); // zz = abs(zz)
 
     // /* we should add 2^(e - prec - 1) to |zz| */
     int eint = (int)e;
@@ -92,7 +93,7 @@ ulp_error_double(double y, double x)
     mpfr_set_emax(emax);
     mpfr_clear(yy);
     mpfr_clear(zz);
-    return err;
+    return err * sign;
 }
 
 double distance2inf32(float x)
@@ -119,7 +120,7 @@ double distance2inf32(float x)
             ret = mpfr_inf_p(zz);
             steps++;
         }
-    printf("steps= %f\n", steps);
+    // printf("steps= %f\n", steps);
     return (double)steps;
 }
 
