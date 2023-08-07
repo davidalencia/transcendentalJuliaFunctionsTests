@@ -96,11 +96,11 @@ ulp_error_double(double y, double x)
     return err * sign;
 }
 
-double distance2inf32(float x)
+double distance2inf64(float x)
 {
     mpfr_t zz;
-    mpfr_init2(zz, 52); // 52 = precision of normal float64
-    int ret = mpfr_set_d(zz, Inf, MPFR_RNDN);
+    mpfr_init2(zz, 52); // 52 = precision of a common float64
+    int ret = mpfr_set_d(zz, x, MPFR_RNDN);
     assert(ret == 0);
 
     MPFR_FOO(zz, zz, MPFR_RNDN); // mpfr trig function
@@ -139,7 +139,7 @@ double check(long unsigned int n, double (*WRAPPER)(const double))
     y = WRAPPER(x);
 
     if (isinf(y))
-        return distance2inf32(x);
+        return distance2inf64(x);
 
     return ulp_error_double(y, x);
 }

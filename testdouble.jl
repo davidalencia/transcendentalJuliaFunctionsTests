@@ -5,6 +5,12 @@ using PyCall
 import Random
 using ArgParse
 
+abstract type ParsedFloat <: AbstractFloat end
+
+function ArgParse.parse_item(::Type{Float64}, x::AbstractString)
+    return Float64(eval(Meta.parse(x)))
+end
+
 s = ArgParseSettings()
 @add_arg_table s begin
   "fun"
@@ -16,8 +22,8 @@ s = ArgParseSettings()
       required = true
       arg_type = Float64
   "--batch"
-      help = "another option with an argument"
       arg_type = Int
+      default = 1000000
 end
 
 args = parse_args(ARGS, s)
@@ -108,5 +114,5 @@ function montecarlo(r, poolsize::Int)
 
 end
 
-montecarlo(rng , 10_000_000) 
+montecarlo(rng , BATCH) 
 

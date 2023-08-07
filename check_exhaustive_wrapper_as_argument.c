@@ -195,7 +195,7 @@ double distance2inf32(float x)
 
   int ret = mpfr_set_flt(zz, x, MPFR_RNDN);
   assert(ret == 0);
-  mpfr_printf("x: %.50Rf\n", zz);
+  // mpfr_printf("x: %.50Rf\n", zz);
 
   MPFR_FOO(zz, zz, MPFR_RNDN); // mpfr trig function
   ret = mpfr_inf_p(zz);        // Return non-zero if op is an infinity
