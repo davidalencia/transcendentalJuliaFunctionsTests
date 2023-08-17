@@ -21,6 +21,7 @@
     "functional": "c",
     "iterator": "c",
     "memory": "c",
-    "math.h": "c"
+    "math.h": "c",
+    "stdio.h": "c"
   }
 }

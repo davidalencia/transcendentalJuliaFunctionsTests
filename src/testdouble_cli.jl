@@ -5,7 +5,6 @@ using PyCall
 import Random
 using ArgParse
 
-abstract type ParsedFloat <: AbstractFloat end
 
 function ArgParse.parse_item(::Type{Float64}, x::AbstractString)
     return Float64(eval(Meta.parse(x)))
@@ -116,3 +115,6 @@ end
 
 montecarlo(rng , BATCH) 
 
+
+
+# ccall((:ulp_distance, "checklib.so"), Cdouble, (Cdouble, Ref{BigFloat}), 1.1, nextfloat(bf))
