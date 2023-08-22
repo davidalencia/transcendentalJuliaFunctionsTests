@@ -3,6 +3,7 @@
 #include <mpfr.h>
 #include <assert.h>
 #include <string.h>
+#include <dlfcn.h>
 
 #include <stdio.h>
 
@@ -62,16 +63,11 @@ double distance2inf64(double x)
 {
   double steps = 0;
   x = fabs(x);
-  printf("C] abs(x)=%a\n", x);
   while (!isinf(x))
   {
-    x = nextafter(x, INFINITY);
-    printf("C] x = step(x)=%a\n", x);
-
     steps++;
+    x = nextafter(x, INFINITY);
   }
-  printf("steps= %f", steps);
-  printf("\n");
   return steps;
 }
 
@@ -102,14 +98,109 @@ double ulp_error(double (*foo)(const double), mpfr_fun mpfr_foo, double x)
   mpfr_clear(yy);
   return y;
 }
+mpfr_fun get_mpfr_fun(char *strfoo)
+{
+  if (strcmp(strfoo, "cos") == 0)
+  {
+    return mpfr_cos;
+  }
+  else if (strcmp(strfoo, "sin") == 0)
+  {
+    return mpfr_sin;
+  }
+  else if (strcmp(strfoo, "tan") == 0)
+  {
+    return mpfr_tan;
+  }
+  else if (strcmp(strfoo, "cospi") == 0)
+  {
+    return mpfr_cospi;
+  }
+  else if (strcmp(strfoo, "sinpi") == 0)
+  {
+    return mpfr_sinpi;
+  }
+  else if (strcmp(strfoo, "acos") == 0)
+  {
+    return mpfr_acos;
+  }
+  else if (strcmp(strfoo, "asin") == 0)
+  {
+    return mpfr_asin;
+  }
+  else if (strcmp(strfoo, "atan") == 0)
+  {
+    return mpfr_atan;
+  }
+  else if (strcmp(strfoo, "csc") == 0)
+  {
+    return mpfr_csc;
+  }
+  else if (strcmp(strfoo, "sec") == 0)
+  {
+    return mpfr_sec;
+  }
+  else if (strcmp(strfoo, "cot") == 0)
+  {
+    return mpfr_cot;
+  }
+  else if (strcmp(strfoo, "cosh") == 0)
+  {
+    return mpfr_cosh;
+  }
+  else if (strcmp(strfoo, "sinh") == 0)
+  {
+    return mpfr_sinh;
+  }
+  else if (strcmp(strfoo, "acosh") == 0)
+  {
+    return mpfr_acosh;
+  }
+  else if (strcmp(strfoo, "asinh") == 0)
+  {
+    return mpfr_asinh;
+  }
+  else if (strcmp(strfoo, "atanh") == 0)
+  {
+    return mpfr_atanh;
+  }
+  else if (strcmp(strfoo, "exp") == 0)
+  {
+    return mpfr_exp;
+  }
+  else if (strcmp(strfoo, "expm1") == 0)
+  {
+    return mpfr_expm1;
+  }
+  else if (strcmp(strfoo, "exp2") == 0)
+  {
+    return mpfr_exp2;
+  }
+  else if (strcmp(strfoo, "exp10") == 0)
+  {
+    return mpfr_exp10;
+  }
+  else if (strcmp(strfoo, "log") == 0)
+  {
+    return mpfr_log;
+  }
+  else if (strcmp(strfoo, "log2") == 0)
+  {
+    return mpfr_log2;
+  }
+  else if (strcmp(strfoo, "log10") == 0)
+  {
+    return mpfr_log10;
+  }
+  else if (strcmp(strfoo, "log1p") == 0)
+  {
+    return mpfr_log1p;
+  }
+  return mpfr_cos;
+}
 
-// mpfr_foo get_mpfr_foo(char *strfoo)
-// {
-//   // if(strcmp(strfoo)==0){
-//   //   return
-//   // }
-//   // else if(strcmp(strfoo)==0){
-
-//   // }
-//   return mpfr_cos;
-// }
+double check(double (*foo)(const double), char *mpfrStr, double x)
+{
+  mpfr_fun mpfr_foo = get_mpfr_fun(mpfrStr);
+  return ulp_error(foo, mpfr_foo, x);
+}
