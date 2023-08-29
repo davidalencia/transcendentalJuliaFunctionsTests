@@ -10,16 +10,30 @@ else
     const libmpfr = "libmpfr.so.6"
 end
 
+const zimmermannLib = "clibs/checklib.so"
+
 function ulp_error_call(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float64=100.0)
-    return ccall((:ulp_error, "checklib.so"), Cdouble, (Ptr{Cvoid}, Ptr{Cvoid}, Cdouble), foo, mpfr_foo, x)
+    return ccall((:ulp_error, zimmermannLib), Cdouble, (Ptr{Cvoid}, Ptr{Cvoid}, Cdouble), foo, mpfr_foo, x)
+end
+function hex(x)
+    return py"float.hex"(x)
+end
+function nextinbig(x, step=1)
+    return BigFloat(hex(nextfloat(x, step)))
+end
+function previnbig(x, step=1)
+    return BigFloat(hex(prevfloat(x, step)))
 end
 
-hex(x) = py"float.hex"(x)
-nextinbig(x, step=1) = BigFloat(hex(nextfloat(x, step)))
-previnbig(x, step=1) = BigFloat(hex(prevfloat(x, step)))
+mutable struct dl_Info
+    dli_fname::Cstring
+    dli_fbase::Ptr{Cvoid}
+    dli_sname::Cstring
+    dli_saddr::Ptr{Cvoid}  
+end
 
 @testset verbose=true "ulp_distance" begin
-    ulpdistance(x, y) = ccall((:ulp_distance, "checklib.so"), Cdouble, (Cdouble, Ref{BigFloat}), x, y)
+    ulpdistance(x, y) = ccall((:ulp_distance, zimmermannLib), Cdouble, (Cdouble, Ref{BigFloat}), x, y)
 
     @testset "equality" begin 
         @test ulpdistance(0.0, BigFloat("0.0")) == 0
@@ -64,7 +78,7 @@ previnbig(x, step=1) = BigFloat(hex(prevfloat(x, step)))
 end
 
 @testset "distance2inf" begin
-    distance2inf(x::Float64) = ccall((:distance2inf64, "checklib.so"), Cdouble, (Cdouble,), x)
+    distance2inf(x::Float64) = ccall((:distance2inf64, zimmermannLib), Cdouble, (Cdouble,), x)
     
     @test distance2inf(Inf) == 0.0
     @test distance2inf(-Inf) == 0.0
@@ -121,40 +135,21 @@ end
 
 
 
-
-mutable struct dl_phdr_info
-    dli_fname::Cstring
-    dli_fbase::Ptr{Cvoid}
-    dli_sname::Cstring
-    dli_saddr::Ptr{Cvoid}  
-end
-
-
 @testset "get_mpfr_fun" begin
-    # (mpfr_t, const mpfr_t, mpfr_rnd_t);
-    get_mpfr_fun(strfoo) = @ccall "checklib.so".get_mpfr_fun(strfoo::Cstring)::Ptr{Cvoid}
+    get_mpfr_fun(strfoo) = @ccall zimmermannLib.get_mpfr_fun(strfoo::Cstring)::Ptr{Cvoid}
 
-    getfname(fun::Ptr{Cvoid}) = 
-    unsafe_string(@ccall "checklib.so".get_function_name(fun::Ptr{Cvoid})::Cstring)
+    function getfname(fun::Ptr{Cvoid})::String
+        emptyCstr = Base.unsafe_convert(Cstring, "")
+        info = dl_Info(emptyCstr, Ptr{Cvoid}(), emptyCstr, Ptr{Cvoid}())
+        ccall((:dladdr, "libdl"), Cint, (Ptr{Cvoid}, Ref{dl_Info}), fun, info)
+        return unsafe_string(info.dli_sname)
+    end
     
     function comparename(strfoo)
         fooptr = get_mpfr_fun(strfoo)
         mpfrname = getfname(fooptr)
         @test strfoo == split(mpfrname, "_")[2]
     end
-
-    mcos = get_mpfr_fun("sin")
-    # Dl_info info;
-    # dladdr(fun, &info);
-    # return info.dli_sname;
-    info = dl_phdr_info(Base.unsafe_convert(Cstring, ""), Ptr{Cvoid}(), Base.unsafe_convert(Cstring, "a"), Ptr{Cvoid}())
-    println(info)
-    println(mcos)
-    ret = ccall((:dladdr, "libdl"), Cint, (Ptr{Cvoid}, Ref{dl_phdr_info}), mcos, info)
-    println(ret)
-    println(unsafe_string(info.dli_fname))
-    println(unsafe_string(info.dli_sname))
-    #unsafe_string(path)
 
     comparename("cos")
     comparename("sin")

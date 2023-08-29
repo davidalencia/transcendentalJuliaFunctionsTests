@@ -1,0 +1,7 @@
+name = "ElementalFunctionsTests"
+uuid = "d4cb4dc5-4b71-4e54-85a0-20ff967ef3c3"
+authors = ["David Valencia <davidalencia@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
