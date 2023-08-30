@@ -26,8 +26,9 @@ function ulperror(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float64)::Float64
     (Ptr{Cvoid}, Ptr{Cvoid}, Cdouble), foo, mpfr_foo, x)
 end
 
-macro ulperror(foo::Symbol, x::Float64)
+macro ulperror(foo, x)
   @assert string(foo) in avaliable_mpfrfunctions "'$(string(foo))' not in the available mpfr functions"
+  @show x
   quote
     foo_c = @cfunction($foo, Cdouble, (Cdouble,))
     foo_mpfr = ccall((:get_mpfr_fun, zimmermannLib), Ptr{Cvoid}, (Cstring,), string($foo))
