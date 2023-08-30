@@ -36,8 +36,7 @@ end
 """
 F. Goualard γsectionCC(a,b)
 γ section algorithm for close close intervals
-Draw a float from an interval [a,b] uniformly over the Floats at random.
-TODO: check underflow
+Draw a float from an interval [a,b] uniformly at random.
 """
 function γsectionCC(a, b)
   g = γ(a, b)
@@ -50,11 +49,13 @@ function γsectionCC(a, b)
   end
 end
 
-
-function SESS(a::Float64, b::Float64)::Float64
+"""
+Same Sign Random
+"""
+function SSR(a::Float64, b::Float64)::Float64
   a = reinterpret(UInt64, a)
   b = reinterpret(UInt64, b)
-  @assert a < b "a must be less than b in UInt form"
+  a, b = a < b ? (a, b) : (b, a)
   c = rand(DiscreteUniform(a, b))
   c = UInt64(c)
   return reinterpret(Float64, c)
@@ -67,11 +68,11 @@ end
 function DSR(a::Float64, b::Float64)::Float64
   @assert a < b "a must be less than b"
   if a == 0.0
-    return SESS(+0.0, b)
+    return SSR(+0.0, b)
   elseif b == 0.0
-    return SESS(-0.0, a)
+    return SSR(-0.0, a)
   elseif sign(a) == sign(b)
-    return SESS(a, b)
+    return SSR(a, b)
   else
     l = dis(-0.0, a)
     r = dis(+0.0, b)
@@ -84,15 +85,4 @@ function DSR(a::Float64, b::Float64)::Float64
   end
 end
 
-function piaprox(r, n)
-  points = 0
-  for i in 0:n
-    x = r()
-    y = r()
-    dis = hypot(x, y)
-    if dis < 1
-      points += 1
-    end
-  end
-  return points * 4 / n
-end
+
