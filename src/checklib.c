@@ -3,8 +3,6 @@
 #include <mpfr.h>
 #include <assert.h>
 #include <string.h>
-#include <dlfcn.h>
-
 #include <stdio.h>
 
 typedef int (*mpfr_fun)(mpfr_t, const mpfr_t, mpfr_rnd_t);
@@ -82,8 +80,7 @@ double ulp_error(double (*foo)(const double), mpfr_fun mpfr_foo, double x)
   if (isinf(y))
   {
     mpfr_init2(yy, 52);
-    ret = mpfr_set_d(yy, x, MPFR_RNDN);
-    assert(ret == 0);
+    mpfr_set_d(yy, x, MPFR_RNDN);
     mpfr_foo(yy, yy, MPFR_RNDN);
     y = mpfr_get_d(yy, MPFR_RNDN);
     mpfr_clear(yy);
@@ -152,6 +149,10 @@ mpfr_fun get_mpfr_fun(char *strfoo)
   {
     return mpfr_sinh;
   }
+  else if (strcmp(strfoo, "tanh") == 0)
+  {
+    return mpfr_tanh;
+  }
   else if (strcmp(strfoo, "acosh") == 0)
   {
     return mpfr_acosh;
@@ -196,7 +197,8 @@ mpfr_fun get_mpfr_fun(char *strfoo)
   {
     return mpfr_log1p;
   }
-  return mpfr_cos;
+  printf("function %s not found\n", strfoo);
+  return mpfr_log1p;
 }
 
 double check(double (*foo)(const double), char *mpfrStr, double x)

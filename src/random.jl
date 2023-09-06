@@ -11,10 +11,8 @@ tldr: toma el ulp mas grande dentro del intervalo.
 
 """
 @inline function γ(a, b)
-  a_abs = abs(a)
-  b_abs = abs(b)
-  a_ulp = nextfloat(a_abs) - a_abs
-  b_ulp = b_abs - prevfloat(b_abs)
+  a_ulp = nextfloat(a) - a
+  b_ulp = b - prevfloat(b)
   return max(a_ulp, b_ulp)
 end
 
@@ -42,10 +40,14 @@ function γsectionCC(a, b)
   g = γ(a, b)
   hi = ceilint(a, b, g)
   k = rand(DiscreteUniform(0, hi))
+  kg = k * g
+  if kg == Inf
+    kg = ((k / 2) * (g / 2)) * 2
+  end
   if abs(a) <= abs(b)
-    return (k == hi) ? a : b - k * g
+    return (k == hi) ? a : b - kg
   else
-    return (k == hi) ? b : a + k * g
+    return (k == hi) ? b : a + kg
   end
 end
 
