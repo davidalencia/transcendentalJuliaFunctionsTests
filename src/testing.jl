@@ -2,6 +2,7 @@ using StatsBase
 using Plots
 using ProgressMeter
 using Random
+using Printf
 import Base.GC.gc
 
 struct Error
@@ -9,10 +10,22 @@ struct Error
   err::Float64 
 end
 
+struct TestsResults 
+  f::Symbol
+  bucketsrange::StepRangeLen
+  buckets::Vector{Float64}
+  maxError::Error
+  batchsize::Int
+end
+
 const openinfinite = (nextfloat(-Inf), prevfloat(Inf))
 
+
+buckets(r) = zeros(r.len-1)
+hex(x) = @sprintf "%a" x
+
 function add2bucket!(h, r, x)
-  if x<r[1]
+  if x<r[1] || abs(x) == 0;
     return
   end
   for i in 2:r.len
@@ -22,10 +35,6 @@ function add2bucket!(h, r, x)
     end
   end
 end
-
-
-buckets(r) = zeros(r.len-1)
-hex(x) = @sprintf "%a" x
 
 function domain(f::Symbol)::Tuple{Float64,Float64}
   d = Dict(
@@ -73,74 +82,17 @@ function init_testRandomBatch(fun::Symbol)
   Random.seed!(20051999)
   fun_c = eval(:@cfunction($fun, Cdouble, (Cdouble,)))
   fun_mpfr = ccall((:get_mpfr_fun, zimmermannLib), Ptr{Cvoid}, (Cstring,), string(fun))
-  h = Histogram(range(-2, 2, length=81))
-  maxerror = Error(0.0, 0.0)
-  return (fun_c, fun_mpfr, h, maxerror)
-end
-
-@noinline function testRandomBatch(fun; batchSize=100_000, rand=() -> γsectionCC(domain(Symbol(fun))...), io = stdout::IO, imagesDir="results/")
-  println(io, fun)
-  fun_c, fun_mpfr, h, maxerror = init_testRandomBatch(fun)
-  @showprogress 0.5 string(fun) for i in 1:batchSize
-    r = rand()
-    err = ulperror(fun_c, fun_mpfr, r)
-    addvalue!(h, err)
-    if err>maxerror.err
-      maxerror = Error(r, err)
-    end
-  end
-  println(io, "maxerror = $(maxerror.err) at $(hex(maxerror.x))")
-  println(io, h)
-  savefig(plot(h, label="$fun-$batchSize-$(hex.(domain(Symbol(fun))))"), imagesDir*"$fun-$batchSize.png")
-end
-
-function save_testRandomBatch(fun; file ="results/results.txt", kwargs...)
-  open(file, "a+") do file
-    testRandomBatch(fun; io=file, kwargs...)
-  end
-  gc()
-end
-
-
-function testRandomBatch_γ(fun::Function, domain::Tuple{Float64, Float64}; batchSize::Int=100_000, io::IO = stdout::IO, imagesDir::String="results/")
-  println(io, fun)
-  fun_c, fun_mpfr, h, maxerror = init_testRandomBatch(fun)
-  @showprogress 0.5 string(fun) for i in 1:batchSize
-    r = γsectionCC(domain...)
-    err = ulperror(fun_c, fun_mpfr, r)
-    addvalue!(h, err)
-    if err>maxerror.err
-      maxerror = Error(r, err)
-    end
-  end
-  println(io, "maxerror = $(maxerror.err) at $(hex(maxerror.x))")
-  println(io, h)
-  savefig(plot(h, label="$fun-$batchSize-$(hex.(domain(Symbol(fun))))"), imagesDir*"$fun-$batchSize.png")
-end
-
-function testRandomBatch_DSR(fun::Symbol, domain::Tuple{Float64, Float64}; batchSize::Int=100_000, io::IO = stdout::IO, imagesDir::String="results/")
-  println(io, fun)
-  fun_c, fun_mpfr, h, maxerror = init_testRandomBatch(fun)
-  @showprogress for i in 1:batchSize
-    r = DSR(domain...)
-    err = ulperror(fun_c, fun_mpfr, r)
-    addvalue!(h, err)
-    if err>maxerror.err
-     maxerror = Error(r, err)
-    end
-  end
-  println(io, "maxerror = $(maxerror.err) at $(hex(maxerror.x))")
-  println(io, h)
-  savefig(plot(h, label="$fun-$batchSize-$(hex.(domain(Symbol(fun))))"), imagesDir*"$fun-$batchSize.png")
-end
-
-@noinline function testRandomBatch_(fun; batchSize=100_000, rand=() -> γsectionCC(domain(Symbol(fun))...), io = stdout::IO, imagesDir="results/")
-  println(io, fun)
-  fun_c, fun_mpfr, _, maxerror = init_testRandomBatch(fun)
-  r = range(-2, 2, length=81)
+  r = range(-2, 2, length=41)
   h = buckets(r)
+  maxerror = Error(0.0, 0.0)
+  return (fun_c, fun_mpfr, h, r, maxerror)
+end
+
+@noinline function testRandomBatch(fun::Symbol, rng::AbstractRNG; batchSize=100_000, io = IOBuffer())
+  println(io, fun)
+  fun_c, fun_mpfr, h, r, maxerror = init_testRandomBatch(fun)
   @showprogress 0.5 string(fun) for i in 1:batchSize
-    rn = rand()
+    rn = rand(rng)
     err = ulperror(fun_c, fun_mpfr, rn)
     add2bucket!(h, r, err)
     if err>maxerror.err
@@ -149,5 +101,13 @@ end
   end
   println(io, "maxerror = $(maxerror.err) at $(hex(maxerror.x))")
   println(io, h)
-  # savefig(bar(r, h, label="$fun-$batchSize"), imagesDir*"$fun-$batchSize.png")
+  return TestsResults(fun,r,h, maxerror, batchSize)
+end
+
+function save_testRandomBatch(fun::Symbol, rng::AbstractRNG; file ="results/results.txt", imagesDir="./", kwargs...)
+  open(file, "a+") do file
+    res = testRandomBatch(fun, rng; io=file, kwargs...)
+    savefig(bar(res.bucketsrange, res.buckets, label="$fun-$(res.batchsize)"), imagesDir*"$fun-$batchSize.png")
+  end
+  gc()
 end

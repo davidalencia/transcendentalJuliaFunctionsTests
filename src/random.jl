@@ -1,16 +1,46 @@
-using Distributions
-using Printf
+import Base.rand
+import Random.AbstractRNG
 
-export randomfloat, γsectionCC
+export Floating64Distribution, FloatingDistribution
+export γSection64, γSection
+
+#------------------------------------------------------------------------------
+#----------------------------------structs-------------------------------------
+#------------------------------------------------------------------------------
+
+struct Floating64Distribution <: AbstractRNG
+  a::Float64
+  b::Float64
+  Floating64Distribution(a::Float64, b::Float64) =
+    a < b ? new(a, b) : error("a must be less than b")
+end
+
+const FloatingDistribution = Floating64Distribution
+
+struct γSection64 <: AbstractRNG
+  a::Float64
+  b::Float64
+  g::Float64
+  hi::Int64
+  function γSection64(a::Float64, b::Float64)
+    @assert a < b "a must be less than b"
+    g = γ(a, b)
+    return new(a, b, g, ceilint(a, b, g))
+  end
+end
+
+const γSection = γSection64
+
+
+#------------------------------------------------------------------------------
+#-------------------------------Util functions---------------------------------
+#------------------------------------------------------------------------------
 
 
 """
-TODO: modificar γ para que si a<0 & b>0 & abs(a)>abs(b) entonces has lo que hice
-sino toma ulp(b)
 tldr: toma el ulp mas grande dentro del intervalo.
-
 """
-@inline function γ(a, b)
+function γ(a, b)
   a_ulp = nextfloat(a) - a
   b_ulp = b - prevfloat(b)
   return max(a_ulp, b_ulp)
@@ -18,9 +48,9 @@ end
 
 """
 ceilint(a,b,g)
-Compute db/g-a/ge correctly using Dekker’s algorithm for an exact summation. 
+Compute b/g-a/g correctly using Dekker’s algorithm for an exact summation. 
 """
-@inline function ceilint(a, b, g)::Int64
+function ceilint(a, b, g)::Int64
   s = b / g - a / g
   if abs(a) <= abs(b)
     ε = -a / g - (s - b / g)
@@ -31,60 +61,53 @@ Compute db/g-a/ge correctly using Dekker’s algorithm for an exact summation.
   return (s != si) ? si : si + Int(ε > 0)
 end
 
-"""
-F. Goualard γsectionCC(a,b)
-γ section algorithm for close close intervals
-Draw a float from an interval [a,b] uniformly at random.
-"""
-function γsectionCC(a, b)
-  g = γ(a, b)
-  hi = ceilint(a, b, g)
-  k = rand(DiscreteUniform(0, hi))
-  kg = k * g
-  if kg == Inf
-    kg = ((k / 2) * (g / 2)) * 2
+function samesignRandom(a::UInt64, b::UInt64)::Float64
+  return reinterpret(Float64, rand(a:b))
+end
+
+
+#------------------------------------------------------------------------------
+#------------------------------------rand--------------------------------------
+#------------------------------------------------------------------------------
+
+@inline function rand(rng::Floating64Distribution)::Float64
+  a_uint = reinterpret(UInt64, rng.a)
+  b_uint = reinterpret(UInt64, rng.b)
+  zp_uint = reinterpret(UInt64, +0.0)
+  zn_uint = reinterpret(UInt64, -0.0)
+  if rng.a == 0.0
+    return samesignRandom(zp_uint, b_uint)
+  elseif rng.b == 0.0
+    return samesignRandom(zn_uint, a_uint)
+  elseif sign(rng.a) == sign(rng.b)
+    a_uint, b_uint = a_uint < b_uint ? (a_uint, b_uint) : (b_uint, a_uint)
+    return samesignRandom(a_uint, b_uint)
   end
-  if abs(a) <= abs(b)
-    return (k == hi) ? a : b - kg
+  l = a_uint - zn_uint
+  k = rand(-Int64(l):Int64(b_uint))
+  if k < 0
+    return reinterpret(Float64, zn_uint + UInt64(-k))
   else
-    return (k == hi) ? b : a + kg
+    return reinterpret(Float64, UInt64(k))
   end
 end
 
-"""
-Same Sign Random
-"""
-function SSR(a::Float64, b::Float64)::Float64
-  a = reinterpret(UInt64, a)
-  b = reinterpret(UInt64, b)
-  a, b = a < b ? (a, b) : (b, a)
-  c = rand(DiscreteUniform(a, b))
-  c = UInt64(c)
-  return reinterpret(Float64, c)
-end
 
-function dis(a::Float64, b::Float64)::UInt64
-  return reinterpret(UInt64, b) - reinterpret(UInt64, a)
-end
-
-function DSR(a::Float64, b::Float64)::Float64
-  @assert a < b "a must be less than b"
-  if a == 0.0
-    return SSR(+0.0, b)
-  elseif b == 0.0
-    return SSR(-0.0, a)
-  elseif sign(a) == sign(b)
-    return SSR(a, b)
+@inline function rand(rng::γSection64)::Float64
+  k = rand(0:rng.hi)
+  kg = Float64(k) * rng.g
+  top = k == rng.hi
+  cmp_abs = abs(rng.a) <= abs(rng.b)
+  if isinf(kg)
+    kg = ((k / 2) * (rng.g / 2)) * 2
+  end
+  if top && cmp_abs
+    return rng.a
+  elseif top
+    return rng.b
+  elseif cmp_abs
+    return rng.b - kg
   else
-    l = dis(-0.0, a)
-    r = dis(+0.0, b)
-    k = rand(DiscreteUniform(-Int64(l), Int64(r)))
-    if k < 0
-      return reinterpret(Float64, reinterpret(UInt64, -0.0) + UInt64(-k))
-    else
-      return reinterpret(Float64, UInt64(k))
-    end
+    return rng.a + kg
   end
 end
-
-
