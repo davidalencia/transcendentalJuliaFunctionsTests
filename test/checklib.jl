@@ -1,6 +1,5 @@
 import Base.DL_LOAD_PATH
 using Test
-using PyCall
 
 if Sys.iswindows()
     const libmpfr = "libmpfr-6.dll"
@@ -18,9 +17,7 @@ end
 function ulp_error32_call(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float64=100.0)
     return ccall((:ulp_error32, zimmermannLib), Cdouble, (Ptr{Cvoid}, Ptr{Cvoid}, Cfloat), foo, mpfr_foo, x)
 end
-function hex(x)
-    return py"float.hex"(x)
-end
+
 function nextinbig(x, step=1)
     return BigFloat(nextfloat(x, step))
 end
@@ -75,9 +72,9 @@ end
         end
         
         @testset "not full ulps" begin 
-            @test ulpdistance(1.0, BigFloat(1.0)+BigFloat(hex(eps(1.0)/2))) ≈ 0.5
-            @test ulpdistance(1.0, BigFloat(1.0)+BigFloat(hex(eps(1.0)/4))) ≈ 0.25
-            @test ulpdistance(1.0, BigFloat(1.0)+BigFloat(hex(eps(1.0)/8))) ≈ 0.125
+            @test ulpdistance(1.0, BigFloat(1.0)+BigFloat(eps(1.0)/2)) ≈ 0.5
+            @test ulpdistance(1.0, BigFloat(1.0)+BigFloat(eps(1.0)/4)) ≈ 0.25
+            @test ulpdistance(1.0, BigFloat(1.0)+BigFloat(eps(1.0)/8)) ≈ 0.125
         end
     end
 
@@ -149,12 +146,12 @@ end
         end
 
         @testset "directions" begin 
-            @test sign(ulpdistance(1.0, nextinbig(1.0))) == 1.0
+            @test sign(ulpdistance(1.0,ßnextinbig(1.0))) == 1.0
             @test sign(ulpdistance(1.0, previnbig(1.0))) == -1.0
         end
 
         @testset "normal power of 2" begin 
-            @test ulpdistance(1.0, nextinbig(Float32(1.0f0))) ≈ 1.0
+            @test ulpdistance(1.0, nextinbig(1.0f0)) ≈ 1.0
             @test ulpdistance(1.0, previnbig(1.0f0)) ≈ -0.5
             @test ulpdistance(2.0, nextinbig(2.0f0)) ≈ 1.0
             @test ulpdistance(prevfloat(2.0f0), nextinbig(2.0f0)) ≈ 3.0

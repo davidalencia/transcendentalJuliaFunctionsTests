@@ -6,7 +6,7 @@ include("random.jl")
 export mpfrfunctions, mpfrfunctions_symbol
 include("constants.jl")
 
-export ulpdistance, distance2inf, ulperror, ulpdistance32, distance2inf32, ulperror32, mpfrfun
+export @ulperror, ulpdistance, distance2inf, ulperror, ulpdistance32, distance2inf32, ulperror32, mpfrfun
 include("zimmermannInterface.jl")
 
 export openinfinite, domain, testRandomBatch, TestsResults,

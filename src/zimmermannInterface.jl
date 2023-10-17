@@ -1,4 +1,6 @@
-const zimmermannLib = "./clibs/checklib"
+using Pkg
+
+const zimmermannLib = joinpath(dirname(pathof(ElementalFunctionsTests)), "..", "clibs", "checklib")
 
 #------------------Float64--------------
 function ulpdistance(x::Float64, y::BigFloat)::Float64
@@ -16,15 +18,15 @@ end
 
 #------------------Float32--------------
 function ulpdistance32(x::Float32, y::BigFloat)::Float64
-  return ccall((:ulp_distance, zimmermannLib), Cdouble, (Cfloat, Ref{BigFloat}), x, y)
+  return ccall((:ulp_distance32, zimmermannLib), Cdouble, (Cfloat, Ref{BigFloat}), x, y)
 end
 
 function distance2inf32(x::Float32)::Float64
-  return ccall((:distance2inf64, zimmermannLib), Cdouble, (Cfloat,), x)
+  return ccall((:distance2inf32, zimmermannLib), Cdouble, (Cfloat,), x)
 end
 
-function ulperror32(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float32)::Float64
-  return ccall((:ulp_error, zimmermannLib), Cdouble,
+@inline function ulperror32(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float32)::Float64
+  return ccall((:ulp_error32, zimmermannLib), Cdouble,
     (Ptr{Cvoid}, Ptr{Cvoid}, Cfloat), foo, mpfr_foo, x)
 end
 
