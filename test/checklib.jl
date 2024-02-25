@@ -9,7 +9,7 @@ else
     const libmpfr = "libmpfr.so.6"
 end
 
-const zimmermannLib = "clibs/checklib.so"
+const zimmermannLib = "clibs/checklib.dylib"
 
 function ulp_error_call(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float64=100.0)
     return ccall((:ulp_error, zimmermannLib), Cdouble, (Ptr{Cvoid}, Ptr{Cvoid}, Cdouble), foo, mpfr_foo, x)
@@ -146,7 +146,7 @@ end
         end
 
         @testset "directions" begin 
-            @test sign(ulpdistance(1.0,ßnextinbig(1.0))) == 1.0
+            @test sign(ulpdistance(1.0,nextinbig(1.0))) == 1.0
             @test sign(ulpdistance(1.0, previnbig(1.0))) == -1.0
         end
 
