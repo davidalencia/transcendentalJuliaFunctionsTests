@@ -25,7 +25,7 @@ function distance2inf32(x::Float32)::Float64
   return ccall((:distance2inf32, zimmermannLib), Cdouble, (Cfloat,), x)
 end
 
-@inline function ulperror32(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float32)::Float64
+function ulperror32(foo::Ptr{Cvoid}, mpfr_foo::Ptr{Cvoid}, x::Float32)::Float64
   return ccall((:ulp_error32, zimmermannLib), Cdouble,
     (Ptr{Cvoid}, Ptr{Cvoid}, Cfloat), foo, mpfr_foo, x)
 end

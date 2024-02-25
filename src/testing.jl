@@ -4,18 +4,29 @@ using ProgressMeter
 using Random
 using Printf
 import Base.GC.gc
+import Base.@kwdef
 
-struct Error
+
+abstract type AbstractError end
+
+@kwdef struct Error <: AbstractError
   x::Float64
   err::Float64 
 end
 
-struct TestsResults 
+@kwdef struct Error32 <: AbstractError
+  x::Float32
+  err::Float64 
+end
+
+@kwdef struct TestsResults
   f::Symbol
   bucketsrange::StepRangeLen
   buckets::Vector{Float64}
-  maxError::Error
+  maxError::AbstractError
   batchsize::Int
+  mean::Float64
+  variance::Float64
 end
 
 const openinfinite = (nextfloat(-Inf), prevfloat(Inf))
@@ -79,7 +90,6 @@ function addvalue!(h::Histogram, x::Float64, edges=range(-2, 2, length=81))
 end
 
 function init_testRandomBatch(fun::Symbol)
-  Random.seed!(20051999)
   fun_c = eval(:@cfunction($fun, Cdouble, (Cdouble,)))
   fun_mpfr = ccall((:get_mpfr_fun, zimmermannLib), Ptr{Cvoid}, (Cstring,), string(fun))
   r = range(-2, 2, length=41)
@@ -88,20 +98,30 @@ function init_testRandomBatch(fun::Symbol)
   return (fun_c, fun_mpfr, h, r, maxerror)
 end
 
-@noinline function testRandomBatch(fun::Symbol, rng::AbstractRNG; batchSize=100_000, io = IOBuffer())
+function testRandomBatch(fun::Symbol, rng::AbstractRNG; batchSize=100_000, io = IOBuffer(),  seed=20051999)
   println(io, fun)
+  Random.seed!(seed)
+  sum=0    # To store sum of stream 
+  sumsq=0  # To store sum of square of stream 
+  n=0   
   fun_c, fun_mpfr, h, r, maxerror = init_testRandomBatch(fun)
-  @showprogress 0.5 string(fun) for i in 1:batchSize
+  @showprogress 0.5 string(fun) for _ in 1:batchSize
     rn = rand(rng)
     err = ulperror(fun_c, fun_mpfr, rn)
+    n+=1
+    abserr = abs(err)
+    sum+=abserr
+    sumsq+=(abserr*abserr) 
     add2bucket!(h, r, err)
-    if err>maxerror.err
+    if abserr>abs(maxerror.err)
       maxerror = Error(rn, err)
     end
   end
   println(io, "maxerror = $(maxerror.err) at $(hex(maxerror.x))")
   println(io, h)
-  return TestsResults(fun,r,h, maxerror, batchSize)
+  mean = sum/n 
+  var = (sumsq/n) - (mean*mean) 
+  return TestsResults(fun,r,h, maxerror, batchSize, mean, var)
 end
 
 function save_testRandomBatch(fun::Symbol, rng::AbstractRNG; file ="results/results.txt", imagesDir="./", kwargs...)

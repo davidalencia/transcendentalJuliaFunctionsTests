@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 typedef int (*mpfr_fun)(mpfr_t, const mpfr_t, mpfr_rnd_t);
+mpfr_prec_t prec = 100;
 
 double ulp_distance(double x, mpfr_t yy)
 {
@@ -15,7 +16,6 @@ double ulp_distance(double x, mpfr_t yy)
   int prec_float = 53;
   double err;
   mpfr_t xx, dis;
-  mpfr_prec_t prec = 256;
   mpfr_exp_t e;
 
   mpfr_set_emin(mpfr_get_emin_min());
@@ -65,7 +65,6 @@ double ulp_distance32(float x, mpfr_t yy)
   int prec_float = 24;
   double err;
   mpfr_t xx, dis;
-  mpfr_prec_t prec = 256;
   mpfr_exp_t e;
 
   mpfr_set_emin(mpfr_get_emin_min());
@@ -99,8 +98,7 @@ double ulp_distance32(float x, mpfr_t yy)
   else
     e = -127 - prec_float + 2;           // + 1 + 1 (los subnormales tienen un bit menos de precision)
   mpfr_mul_2si(dis, dis, -e, MPFR_RNDN); // dis = dis*2^(-e) RoundNearest = dis/2^e
-
-  err = mpfr_get_d(dis, MPFR_RNDA); // err = (double)dis
+  err = mpfr_get_d(dis, MPFR_RNDA);      // err = (double)dis
 
   mpfr_clear(xx);
   mpfr_clear(dis);
@@ -141,7 +139,7 @@ double ulp_error(double (*foo)(const double), mpfr_fun mpfr_foo, double x)
 
   if (isinf(y))
   {
-    mpfr_init2(yy, 52);
+    mpfr_init2(yy, 53);
     mpfr_set_d(yy, x, MPFR_RNDN);
     mpfr_foo(yy, yy, MPFR_RNDN);
     y = mpfr_get_d(yy, MPFR_RNDN);
@@ -149,7 +147,7 @@ double ulp_error(double (*foo)(const double), mpfr_fun mpfr_foo, double x)
     return distance2inf64(y);
   }
 
-  mpfr_init2(yy, 160);
+  mpfr_init2(yy, prec);
   ret = mpfr_set_d(yy, x, MPFR_RNDN);
   assert(ret == 0);
   mpfr_foo(yy, yy, MPFR_RNDN);
@@ -169,7 +167,7 @@ double ulp_error32(float (*foo)(const float), mpfr_fun mpfr_foo, float x)
 
   if (isinf(y))
   {
-    mpfr_init2(yy, 23);
+    mpfr_init2(yy, 24);
     mpfr_set_flt(yy, x, MPFR_RNDN);
     mpfr_foo(yy, yy, MPFR_RNDN);
     y = mpfr_get_flt(yy, MPFR_RNDN);
@@ -177,7 +175,7 @@ double ulp_error32(float (*foo)(const float), mpfr_fun mpfr_foo, float x)
     return distance2inf32(y);
   }
 
-  mpfr_init2(yy, 160);
+  mpfr_init2(yy, prec);
   ret = mpfr_set_flt(yy, x, MPFR_RNDN);
   assert(ret == 0);
   mpfr_foo(yy, yy, MPFR_RNDN);
