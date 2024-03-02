@@ -12,6 +12,13 @@ double ulp_distance(double x, mpfr_t yy)
 {
   assert(!isinf(x));
   assert(!mpfr_inf_p(yy));
+
+  if(x==0.0){ 
+    mpfr_exp_t e = 1074;
+    mpfr_mul_2si(yy, yy, e, MPFR_RNDN);
+    return mpfr_get_d(yy, MPFR_RNDA); 
+  }
+
   int ret, sign;
   int prec_float = 53;
   double err;
@@ -47,7 +54,7 @@ double ulp_distance(double x, mpfr_t yy)
   if (isnormal(x))
     e = e - prec_float;
   else
-    e = -1023 - prec_float + 2;          // + 1 + 1 (los subnormales tienen un bit menos de precision)
+    e = -1023 - prec_float + 2;          // + 1 + 1 (los subnormales tienen un bit menos de precisión)
   mpfr_mul_2si(dis, dis, -e, MPFR_RNDN); // dis = dis*2^(-e) RoundNearest = dis/2^e
 
   err = mpfr_get_d(dis, MPFR_RNDA); // err = (double)dis
@@ -61,6 +68,13 @@ double ulp_distance32(float x, mpfr_t yy)
 {
   assert(!isinf(x));
   assert(!mpfr_inf_p(yy));
+  
+  if(x==0.0){ 
+    mpfr_exp_t e = 149;
+    mpfr_mul_2si(yy, yy, e, MPFR_RNDN);
+    return mpfr_get_d(yy, MPFR_RNDA); 
+  }
+
   int ret, sign;
   int prec_float = 24;
   double err;
